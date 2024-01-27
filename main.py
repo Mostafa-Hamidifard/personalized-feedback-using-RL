@@ -1,7 +1,19 @@
-import Environment as Env
-# import Agent
+from Environment import Environment
+from Agent import Agent
 
-time = 0
+from time import sleep
+
+Episodes = 100
 
 
-Env.Environment()
+env = Environment()
+agent = Agent()
+
+
+state = env.reset()
+
+
+for _ in range(Episodes):
+    action = agent(state)
+    state = env(action)
+    sleep(0.05)

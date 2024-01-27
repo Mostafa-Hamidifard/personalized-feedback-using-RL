@@ -1,5 +1,5 @@
-import Human
-import EMG_Interpretation
+from Human import Human
+from EMG_Interpretation import EMG_Interpretation
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -11,16 +11,23 @@ class Environment:
     def __init__(self):
         self.pos = np.zeros((2))
         self.dest = (np.random.rand(2)*2*DIM) - DIM
-        self.human = Human.Human()
+        self.human = Human()
         self.monitor = self.Monitor()
         self.vibrator = self.Vibrator(k=2)
     
     def __call__(self, action):
         f = self.vibrator(action)
         emg = self.human(f, self.pos)
-        self.pos = EMG_Interpretation.EMG_Interpretation(emg)
+        
+        if not emg:
+            emg = np.random.rand(2) * DIM # new_pos
+        
+        self.pos = EMG_Interpretation(emg)
         self.monitor(self.pos, self.dest)
         return self.pos
+    
+    def reset(self):
+        self.__init__()
 
     class Monitor():
         def __init__(self):
@@ -36,6 +43,7 @@ class Environment:
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_title('Map')
+            plt.show()
     
     
     class Vibrator():
