@@ -1,4 +1,5 @@
 import Human
+import EMG_Interpretation
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -14,26 +15,27 @@ class Environment:
         self.monitor = self.Monitor()
         self.vibrator = self.Vibrator(k=2)
     
-    def update(self, action):
+    def __call__(self, action):
         f = self.vibrator(action)
-        self.human(f, self.pos)
+        emg = self.human(f, self.pos)
+        self.pos = EMG_Interpretation.EMG_Interpretation(emg)
         self.monitor(self.pos, self.dest)
-
+        return self.pos
 
     class Monitor():
         def __init__(self):
             pass
         
         def __call__(self, pos, dest):
-            self.fig, self.ax = plt.subplots(figsize=(10,5))
-            self.ax.cla()
-            self.ax.scatter(pos[X], pos[Y], marker='o', color='b')
-            self.ax.scatter(dest[X], dest[Y], marker='o', color='r')
+            fig, ax = plt.subplots(figsize=(10,5))
+
+            ax.scatter(dest[X], dest[Y], marker='o', color='r')
+            ax.scatter(pos[X], pos[Y], marker='o', color='b')
             plt.xlim((-DIM,DIM))
             plt.ylim((-DIM,DIM))
-            self.ax.set_xlabel('X')
-            self.ax.set_ylabel('Y')
-            self.ax.set_title('Map')
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_title('Map')
     
     
     class Vibrator():
