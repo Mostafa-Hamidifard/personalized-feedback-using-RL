@@ -16,8 +16,13 @@ class Environment:
         
         self.human = Human(num_vibrators)
         self.vibrator = self.Vibrator(k=2)
+
+        self.reward = self.Reward(dt,self.dest)
+        self.terminated = False
+        self.truncated = False
+
         # self.monitor = self.Monitor()
-    
+        
     
     
     def __call__(self, action):
@@ -47,52 +52,30 @@ class Environment:
             
         def get_position(self):
             return self.p
-
-    class Monitor():
-        def __init__(self,render_mode=None):
-            self.render_mode = render_mode
-            self.is_window_displaying = False
-            self.p_current = np.array([0,0])
-            self.p_desired = np.array([0,0])
-            self.circle_radius = 0
-            self.desired_rect = None
-            self.current_rect = None
-            self.show_desired = True
-            
-        def turn_off_monitor(self):
-            if self.is_window_displaying:
-                pygame.quit()
-                self.is_window_displaying = False
         
-        def turn_on_monitor(self,width=480,height=480):
-            if self.render_mode != 'human':
-                print("render_mode is not set to <human>.")
-                return 0
-            pygame.init()
-            self.window = pygame.display.set_mode((width,height))
-            self.is_window_displaying = True
+    class Reward:
+        def __init__(self,dt,dest):
+            self.dt = dt
+            self.counter = 0
             
-            self.circle_radius = width//20
-            
-            def draw_thread():
-                p_current = self.p_current
-                p_desired = self.p_desired
-                if self.show_desired == True:    
-                    self.desired_rect =  pygame.draw.circle(self.window, (255,0,0), p_desired[0],p_desired[1], self.circle_radius)
-                self.current_rect = pygame.draw.circle(self.window, (0,0,255), p_current[0],p_current[1], self.circle_radius)
-                
-            def runnimg_loop():
-                running = True
-                while self.is_window_displaying and running:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            running = False  
-                            # sys.exit("window was closed")
-                self.turn_off_monitor()
-            
-                
-        def __call__(self, pos, dest):
-            pass
+            self.k_r = 0.1
+            self.r_d = -1 
+            self.dest = dest
+        def check_done(self,pos):
+            while np.linalg.norm(pos-self.dest)<10:
+                self.counter+=1
+                if self.counter>=(2/self.dt):
+                    self.terminated=True
+                    break
+        
+
+        def calc_reward(self,pos):
+            self.check_done()
+            distance = pos - self.dest
+            if(self.terminated):
+                return self.k_r * np.exp(-np.linalg.norm(distance))      
+            else:
+                return self.r_d
     
     
     class Vibrator():
