@@ -10,15 +10,13 @@ X = 0
 Y = 1
 
 class Environment:
-    def __init__(self,dt=0.0001):
+    def __init__(self,dt=0.0001,num_vibrators=8):
         self.pos = np.zeros((2))
-        self.dest = (np.random.rand(2)*2*DIM) - DIM
+        self.dest = (np.random.rand(2)*2*DIM) - DIM # desired position
         
-  
-
-        self.human = Human()
-        self.monitor = self.Monitor()
+        self.human = Human(num_vibrators)
         self.vibrator = self.Vibrator(k=2)
+        # self.monitor = self.Monitor()
     
     
     
@@ -98,10 +96,10 @@ class Environment:
     
     
     class Vibrator():
-        def __init__(self, k):
+        def __init__(self, k ,delay=0):
             self.k = k
             self.counter = 0
-            self.delay = 5
+            self.delay = delay
         
         def __call__(self, inp):
             if self.counter < self.delay:

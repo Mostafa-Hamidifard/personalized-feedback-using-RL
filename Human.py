@@ -2,16 +2,20 @@ import numpy as np
 
 
 class Human():
-    def __init__(self,num_vibrators,angle=None):
+    def __init__(self,num_vibrators,dt,angle=None):
+        # brain delay -> 0.1 s
+        delay = 0.1 // dt
+        
         self.skin = self.Skin(num_vibrators,angle)
-        self.brain = self.Brain()
-        self.emg = self.EMG_Model()
+        self.brain = self.Brain(delay)
+        self.emg = self.EMG_Model(delta=dt,emg_amp_max=100,cross_max_ratio=0.1)
     
-    def __call__(self, f, pos):
+    def __call__(self, f):
         stimulus = self.skin(f)
-        intention = self.brain(stimulus,self.skin.angles, pos)
-        return self.emg(intention)
-
+        intention = self.brain(stimulus , self.skin.angles)
+        emg_out = self.emg(intention)
+        return emg_out["EMG_envelope"]
+            
 
     class Skin():
         """angles is a tuple which contains the angles corrosponding to the vibrator positions computed CCW
@@ -39,15 +43,14 @@ class Human():
                 self.counter = 0
                 # be aware that inp must convert to a 1d vector
                 inp = inp.reshape((-1,))
-                return self.a * np.exp(self.b * inp) 
-                return self.a * np.exp(self.b * inp) #modify
+                return self.a * np.power(inp,self.b) #modify
     
     
     
     class Brain():
-        def __init__(self):
+        def __init__(self,delay):
             self.counter = 0
-            self.delay = 4
+            self.delay = delay
             self.computed_velocity = np.zeros((2,))
         
         """
@@ -93,12 +96,12 @@ class Human():
             w0 = 2*3.14*200;
             emg_list = np.zeros_like(u_list)
             for i,u in enumerate(u_list):  
-                n1 = 0.1 * np.random.randn() # these paramters should get adapted
+                n1 = 0.01 * np.random.randn() # these paramters should get adapted
                 n2 = 5 * np.random.randn()
-                n3 = 0.05 * np.random.randn()
+                n3 = 0.01 * np.random.randn()
                 n4 = 5  * np.random.randn()
                 emg_list[i] = (u+n1)*np.sin( (w0+n2) * t + n4) + n3
-                
+            return emg_list
 
         """BE aware that it shouldnt get delayed"""
         def __call__(self, intention):
@@ -121,11 +124,12 @@ class Human():
                 self.u[self.mapper["down"]] = min(-v_y,self.emg_amp_max)
                 self.u[self.mapper["up"]] = self.alpha * np.log(self.u[self.mapper["down"]] + 1)
             
-            return {"modeled_emg": self._u2emg(self.u),"original": self.u}    
+            return {"Raw_emg": self._u2emg(self.u),"EMG_envelope": self.u}    
             
                 
 
 if __name__ == "__main__":
-    human = Human(4)
-    for i in range(100):
-        pass
+    human = Human(4,0.05)
+    for i in range(5):
+        out = human(np.array([10,0,0,0]))
+        print(out)
