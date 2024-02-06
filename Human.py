@@ -15,8 +15,15 @@ class Human():
         intention = self.brain(stimulus , self.skin.angles)
         emg_out = self.emg(intention)
         return emg_out["EMG_envelope"]
-            
-
+    
+    def reset(self):
+        self.skin.counter = 0
+        self.brain.counter = 0
+        self.brain.computed_velocity =  np.zeros((2,))
+        self.emg.counter = 0
+        self.emg.delay = 0
+        self.emg.u = np.zeros((4,))
+    
     class Skin():
         """angles is a tuple which contains the angles corrosponding to the vibrator positions computed CCW
         from right arm.
@@ -93,7 +100,7 @@ class Human():
             
         def _u2emg(self,u_list):
             t = self.counter * self.delta
-            w0 = 2*3.14*200;
+            w0 = 2*3.14*100;
             emg_list = np.zeros_like(u_list)
             for i,u in enumerate(u_list):  
                 n1 = 0.01 * np.random.randn() # these paramters should get adapted

@@ -10,37 +10,45 @@ X = 0
 Y = 1
 
 class Environment:
-    def __init__(self,dt=0.0001,num_vibrators=8):
+    def __init__(self,dt=0.01,max_time=10,num_vibrators=8):
+        self.dt = dt
         self.pos = np.zeros((2))
         self.dest = (np.random.rand(2)*2*DIM) - DIM # desired position
         
-        self.human = Human(num_vibrators)
+        self.human = Human(num_vibrators,dt)
         self.vibrator = self.Vibrator(k=2)
-
-        self.reward = self.Reward(dt,self.dest)
-        self.terminated = False
-        self.truncated = False
-
+        self.dynamic = self.Dynamical_model(self.pos, dt)
+        self.reward = self.Reward(dt,max_time)
+        
         # self.monitor = self.Monitor()
         
-    
-    
+        
     def __call__(self, action):
         f = self.vibrator(action)
-        emg = self.human(f, self.pos)
+        emg = self.human(f)
+
+        # if not emg:
+        #     emg = np.random.rand(2) * DIM # new_pos
         
-        if not emg:
-            emg = np.random.rand(2) * DIM # new_pos
+        v  = EMG_Interpretation(emg) 
+        self.pos = self.dynamic.update(v)
         
-        self.pos = EMG_Interpretation(emg)
-        self.monitor(self.pos, self.dest)
-        return self.pos
+        reward, terminated, truncated = self.reward.calc_reward(self.pos, self.dest)
+        # self.monitor(self.pos, self.dest)
+        state = {"desired_position":self.dest , "current_position":self.pos}
+        
+        return reward, state, terminated, truncated
     
     def reset(self):
-        self.__init__()
-
-
-    class dynamical_model:
+        self.pos = np.zeros((2))
+        self.dest = (np.random.rand(2)*2*DIM) - DIM # desired position
+        self.dynamic.reset(self.pos)
+        self.reward.reset()
+        self.human.reset()
+        state = {"desired_position":self.dest , "current_position":self.pos}
+        return state
+        
+    class Dynamical_model:
         def __init__(self,initial_position,dt):
             
             self.p = initial_position.reshape((-1,))
@@ -53,29 +61,57 @@ class Environment:
         def get_position(self):
             return self.p
         
+        def reset(self,initial_position):
+            self.p = initial_position.reshape((-1,))
     class Reward:
-        def __init__(self,dt,dest):
+        def __init__(self,dt,max_time,hold_time=2,distance_threshold=10):
             self.dt = dt
-            self.counter = 0
-            
-            self.k_r = 0.1
+            self.distance_threshold = distance_threshold
+            self.max_step = max_time //self.dt
+            self.hold_time = hold_time
+            self.truncate_counter = 0
+            self.terminate_counter = 0
+            self.k_ter = 1000
+            self.alpha = np.log(10)/distance_threshold
+            self.k_teru = 1
             self.r_d = -1 
-            self.dest = dest
-        def check_done(self,pos):
-            while np.linalg.norm(pos-self.dest)<10:
-                self.counter+=1
-                if self.counter>=(2/self.dt):
-                    self.terminated=True
-                    break
-        
-
-        def calc_reward(self,pos):
-            self.check_done()
-            distance = pos - self.dest
-            if(self.terminated):
-                return self.k_r * np.exp(-np.linalg.norm(distance))      
+            
+        def check_done(self,distance):
+            terminated = False
+            truncated = False
+            if np.linalg.norm(distance)<self.distance_threshold:
+                self.terminate_counter += 1
             else:
-                return self.r_d
+                self.terminate_counter = 0
+                
+            if self.terminate_counter >= (self.hold_time//self.dt):
+                terminated = True
+            
+            if self.truncate_counter >= self.max_step:
+                truncated = True
+                
+            return terminated,truncated
+        
+        def reset(self):
+            self.truncate_counter = 0
+            self.terminate_counter = 0
+                
+
+        def calc_reward(self,pos,dest):
+            self.truncate_counter += 1
+            
+            distance = pos - dest
+            
+            terminated , truncated = self.check_done(distance)
+            reward = 0 
+            if(terminated):
+                reward=  self.k_ter * np.exp(-1 * self.alpha * np.linalg.norm(distance))      
+            
+            elif (truncated):
+                reward = -self.k_teru * np.linalg.norm(distance)  
+            else:
+                reward =  self.r_d
+            return reward, terminated, truncated
     
     
     class Vibrator():
