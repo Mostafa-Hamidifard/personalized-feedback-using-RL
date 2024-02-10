@@ -1,11 +1,11 @@
 from Human import Human
 from EMG_Interpretation import EMG_Interpretation
 import numpy as np
-import pygame
+# import pygame
 # import Threading
 # import sys
 
-DIM = 240
+DIM = 512
 X = 0
 Y = 1
 
@@ -13,15 +13,14 @@ class Environment:
     def __init__(self,dt=0.01,max_time=10,num_vibrators=8):
         self.dt = dt
         self.pos = np.zeros((2))
-        self.dest = (np.random.rand(2)*2*DIM) - DIM # desired position
+        self.dest = np.random.rand(2)*DIM  # desired position
         
         self.human = Human(num_vibrators,dt)
-        self.vibrator = self.Vibrator(k=2)
+        self.vibrator = self.Vibrator(k=1)
         self.dynamic = self.Dynamical_model(self.pos, dt)
         self.reward = self.Reward(dt,max_time)
         
         # self.monitor = self.Monitor()
-        
         
     def __call__(self, action):
         f = self.vibrator(action)
@@ -41,7 +40,7 @@ class Environment:
     
     def reset(self):
         self.pos = np.zeros((2))
-        self.dest = (np.random.rand(2)*2*DIM) - DIM # desired position
+        self.dest = np.random.rand(2)*DIM # desired position
         self.dynamic.reset(self.pos)
         self.reward.reset()
         self.human.reset()
@@ -50,7 +49,6 @@ class Environment:
         
     class Dynamical_model:
         def __init__(self,initial_position,dt):
-            
             self.p = initial_position.reshape((-1,))
             self.dt = dt
             
@@ -63,6 +61,7 @@ class Environment:
         
         def reset(self,initial_position):
             self.p = initial_position.reshape((-1,))
+    
     class Reward:
         def __init__(self,dt,max_time,hold_time=2,distance_threshold=10):
             self.dt = dt
@@ -112,7 +111,6 @@ class Environment:
             else:
                 reward =  self.r_d
             return reward, terminated, truncated
-    
     
     class Vibrator():
         def __init__(self, k ,delay=0):
